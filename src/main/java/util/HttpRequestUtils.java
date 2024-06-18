@@ -20,6 +20,13 @@ public class HttpRequestUtils {
         return path;
     }
 
+    public static String getParameter(String url) {
+        int index = url.indexOf("?");
+        String requestPath = url.substring(0, index);
+        String params = url.substring(index + 1);
+        return params;
+    }
+
     /**
      * @param queryString은
      *            URL에서 ? 이후에 전달되는 field1=value1&field2=value2 형식임
@@ -44,8 +51,10 @@ public class HttpRequestUtils {
         }
 
         String[] tokens = values.split(separator);
-        return Arrays.stream(tokens).map(t -> getKeyValue(t, "=")).filter(p -> p != null)
-                .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
+        return Arrays.stream(tokens)
+            .map(t -> getKeyValue(t, "="))
+            .filter(p -> p != null)
+            .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
     }
 
     static Pair getKeyValue(String keyValue, String regex) {
