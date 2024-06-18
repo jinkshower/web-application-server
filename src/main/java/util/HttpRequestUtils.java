@@ -13,6 +13,11 @@ import webserver.RequestHandler;
 public class HttpRequestUtils {
     private static final Logger log = LoggerFactory.getLogger(HttpRequestUtils.class);
 
+    public static String getMethod(String firstLine) {
+        String[] splited = firstLine.split(" ");
+        return splited[0];
+    }
+
     public static String getUrl(String firstLine) {
         String[] splited = firstLine.split(" ");
         String path = splited[1];
@@ -20,11 +25,26 @@ public class HttpRequestUtils {
         return path;
     }
 
+    public static Map<String, String> getHeader(String wholeHeader) {
+        return parseHeaderValues(wholeHeader, "\n");
+    }
+
+    private static Map<String, String> parseHeaderValues(String values, String separator) {
+        if (Strings.isNullOrEmpty(values)) {
+            return Maps.newHashMap();
+        }
+
+        String[] tokens = values.split(separator);
+        return Arrays.stream(tokens)
+            .map(t -> getKeyValue(t, ":"))
+            .filter(p -> p != null)
+            .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
+    }
+
     public static String getParameter(String url) {
         int index = url.indexOf("?");
         String requestPath = url.substring(0, index);
-        String params = url.substring(index + 1);
-        return params;
+        return url.substring(index + 1);
     }
 
     /**
