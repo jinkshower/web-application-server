@@ -5,4 +5,4 @@ Content-Length: 46
 Content-Type: application/x-www-form-urlencoded
 Accept: */*
 
-username=javajigi&password=password&name=JaeSung
+userId=javajigi&password=password&name=JaeSung
