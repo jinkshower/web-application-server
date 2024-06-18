@@ -11,6 +11,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 
 import java.nio.file.Files;
+import java.util.Collection;
 import java.util.Map;
 import model.User;
 import org.slf4j.Logger;
@@ -63,6 +64,58 @@ public class RequestHandler extends Thread {
         }
     }
 
+    private void doGet(final String url, final BufferedReader br, final OutputStream out)
+        throws IOException {
+        if (url.equals("/user/list")) {
+            getAllUsers(br, out);
+            return;
+        }
+        DataOutputStream dos = new DataOutputStream(out);
+
+        byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
+
+        response200Header(dos, body.length);
+        responseBody(dos, body);
+    }
+
+    private void getAllUsers(BufferedReader br, OutputStream out) throws IOException {
+        Map<String, String> headers = readHeader(br);
+        Map<String, String> cookies = HttpRequestUtils.parseCookies(headers.get("Cookie"));
+
+        if (cookies.get("logined") == null || !Boolean.parseBoolean(cookies.get("logined"))) {
+            DataOutputStream dos = new DataOutputStream(out);
+            response302Header(dos, "user/login.html");
+            return;
+        }
+
+        Collection<User> all = DataBase.findAll();
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("<html>");
+        sb.append("<head><title>User List</title></head>");
+        sb.append("<body>");
+        sb.append("<h1>User List</h1>");
+        sb.append("<table border=\"1\">");
+        sb.append("<tr><th>ID</th><th>Name</th><th>Email</th></tr>");
+
+        for (User user : all) {
+            sb.append("<tr>");
+            sb.append("<td>").append(user.getUserId()).append("</td>");
+            sb.append("<td>").append(user.getName()).append("</td>");
+            sb.append("<td>").append(user.getEmail()).append("</td>");
+            sb.append("</tr>");
+        }
+
+        sb.append("</table>");
+        sb.append("</body>");
+        sb.append("</html>");
+
+        String html = sb.toString();
+        DataOutputStream dos = new DataOutputStream(out);
+        response200Header(dos, html.length());
+        responseBody(dos, html.getBytes());
+    }
+
     private void login(final BufferedReader br, final OutputStream out) throws IOException {
         Map<String, String> headers = readHeader(br);
         Map<String, String> params = readParams(br, headers);
@@ -104,10 +157,7 @@ public class RequestHandler extends Thread {
         log.debug("User : {}", user);
 
         DataOutputStream dos = new DataOutputStream(out);
-        response302Header(dos);
-
-        byte[] body = Files.readAllBytes(new File("./webapp" + "/index.html").toPath());
-        responseBody(dos, body);
+        response302Header(dos, "index.html");
     }
 
     private Map<String, String> readParams(final BufferedReader br,
@@ -133,16 +183,6 @@ public class RequestHandler extends Thread {
         return headers;
     }
 
-    private void doGet(final String url, final BufferedReader br, final OutputStream out)
-        throws IOException {
-        DataOutputStream dos = new DataOutputStream(out);
-
-        byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
-
-        response200Header(dos, body.length);
-        responseBody(dos, body);
-    }
-
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
@@ -154,10 +194,10 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void response302Header(DataOutputStream dos) {
+    private void response302Header(DataOutputStream dos, String location) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: http://localhost:8080/index.html\r\n");
+            dos.writeBytes("Location: http://localhost:8080/" + location + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
