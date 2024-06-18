@@ -15,15 +15,6 @@ public class User {
         this.email = email;
     }
 
-    public static User from(Map<String, String> params) {
-        String userId = params.get("userId");
-        String password = params.get("password");
-        String name = params.get("name");
-        String email = params.get("email");
-
-        return new User(userId, password, name, email);
-    }
-
     public String getUserId() {
         return userId;
     }
@@ -43,5 +34,9 @@ public class User {
     @Override
     public String toString() {
         return "User [userId=" + userId + ", password=" + password + ", name=" + name + ", email=" + email + "]";
+    }
+
+    public boolean login(final String password) {
+        return this.password.equals(password);
     }
 }
