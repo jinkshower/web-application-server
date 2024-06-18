@@ -14,10 +14,9 @@ import util.IOUtils;
 public class HttpRequest {
     private static final Logger log = LoggerFactory.getLogger(HttpRequest.class);
 
-    private String method;
-    private String path;
     private Map<String, String> headers = new HashMap<>();
     private Map<String, String> parameters = new HashMap<>();
+    private RequestLine requestLine;
 
     public HttpRequest(final InputStream in) {
         try {
@@ -27,7 +26,7 @@ public class HttpRequest {
                 return;
             }
 
-            processRequestLine(line);
+            requestLine = new RequestLine(line);
 
             line = br.readLine();
             while (line != null && !line.equals("")) {
@@ -37,41 +36,23 @@ public class HttpRequest {
                 line = br.readLine();
             }
 
-            if ("POST".equals(method)) {
+            if ("POST".equals(getMethod())) {
                 String body = IOUtils.readData(br, Integer.parseInt(headers.get("Content-Length")));
                 parameters = HttpRequestUtils.parseQueryString(body);
+            } else {
+                parameters = requestLine.getParams();
             }
         } catch (IOException e) {
             log.error(e.getMessage());
         }
     }
 
-    private void processRequestLine(final String requestLine) {
-        log.debug("request line : {}", requestLine);
-        String[] tokens = requestLine.split(" ");
-        method = tokens[0];
-
-        if ("POST".equals(method)) {
-            path = tokens[1];
-            return;
-        }
-
-        int index = tokens[1].indexOf("?");
-        if (index == -1) {
-            path = tokens[1];
-        } else {
-            path = tokens[1].substring(0, index);
-            parameters = HttpRequestUtils.parseQueryString(tokens[1].substring(index + 1));
-        }
-    }
-
-
     public String getMethod() {
-        return method;
+        return requestLine.getMethod();
     }
 
     public String getPath() {
-        return path;
+        return requestLine.getPath();
     }
 
     public String getHeader(final String name) {
