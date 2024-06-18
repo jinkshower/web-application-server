@@ -40,6 +40,7 @@ public class RequestHandler extends Thread {
 
             String method = HttpRequestUtils.getMethod(firstLine);
             String url = HttpRequestUtils.getUrl(firstLine);
+            log.debug("method : {}, url : {}", method, url);
 
             if (method.equals("POST")) {
                 log.debug("post entered");
@@ -55,8 +56,68 @@ public class RequestHandler extends Thread {
 
     private void doPost(final String url, final BufferedReader br, final OutputStream out)
         throws IOException {
-        //Content-Length 를 구한다
-        //Content Body를 구한다.
+        if (url.equals("/user/create")) {
+            createUser(br, out);
+        } else if (url.equals("/user/login")) {
+            login(br, out);
+        }
+    }
+
+    private void login(final BufferedReader br, final OutputStream out) throws IOException {
+        Map<String, String> headers = readHeader(br);
+        Map<String, String> params = readParams(br, headers);
+
+        boolean authenticated = DataBase.isValidUser(params.get("userId"), params.get("password"));
+        log.debug("authenticated : {}", authenticated);
+
+        DataOutputStream dos = new DataOutputStream(out);
+        responseLoginHeader(dos, authenticated);
+
+        File file = null;
+        if (authenticated) {
+            file = new File("./webapp" + "/index.html");
+        } else {
+            file = new File("./webapp" + "/user/login_failed.html");
+        }
+
+        responseBody(dos, Files.readAllBytes(file.toPath()));
+    }
+
+    private void responseLoginHeader(final DataOutputStream dos, final boolean authenticated) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Set-Cookie: logined=" + authenticated + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void createUser(final BufferedReader br, final OutputStream out) throws IOException {
+        Map<String, String> headers = readHeader(br);
+        Map<String, String> params = readParams(br, headers);
+
+        User user = User.from(params);
+        DataBase.addUser(user);
+
+        log.debug("User : {}", user);
+
+        DataOutputStream dos = new DataOutputStream(out);
+        response302Header(dos);
+
+        byte[] body = Files.readAllBytes(new File("./webapp" + "/index.html").toPath());
+        responseBody(dos, body);
+    }
+
+    private Map<String, String> readParams(final BufferedReader br,
+        final Map<String, String> headers) throws IOException {
+        int contentLength = Integer.parseInt(headers.get("Content-Length"));
+        String contentBody = IOUtils.readData(br, contentLength);
+        return HttpRequestUtils.parseQueryString(contentBody);
+    }
+
+    private Map<String, String> readHeader(BufferedReader br) throws IOException {
         String line = null;
         StringBuilder sb = new StringBuilder();
         while ((line = br.readLine()) != null) {
@@ -69,20 +130,7 @@ public class RequestHandler extends Thread {
         log.debug("read done");
         Map<String, String> headers = HttpRequestUtils.getHeader(sb.toString());
         log.debug("headers : {}", headers);
-        int contentLength = Integer.parseInt(headers.get("Content-Length"));
-        String contentBody = IOUtils.readData(br, contentLength);
-        Map<String, String> params = HttpRequestUtils.parseQueryString(contentBody);
-
-        User user = User.from(params);
-        DataBase.addUser(user);
-
-        log.debug("User : {}", user);
-
-        DataOutputStream dos = new DataOutputStream(out);
-        response302Header(dos);
-
-        byte[] body = Files.readAllBytes(new File("./webapp" + "/index.html").toPath());
-        responseBody(dos, body);
+        return headers;
     }
 
     private void doGet(final String url, final BufferedReader br, final OutputStream out)

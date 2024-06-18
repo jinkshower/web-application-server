@@ -21,4 +21,12 @@ public class DataBase {
     public static Collection<User> findAll() {
         return users.values();
     }
+
+    public static boolean isValidUser(String userId, String password) {
+        User user = findUserById(userId);
+        if (user == null) {
+            return false;
+        }
+        return user.getPassword().equals(password);
+    }
 }
