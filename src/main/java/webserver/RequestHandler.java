@@ -70,12 +70,31 @@ public class RequestHandler extends Thread {
             getAllUsers(br, out);
             return;
         }
+//        "/css/bootstrap.min.css";
+        if (url.endsWith(".css")) {
+            responseCSS(url, out);
+            return;
+        }
+
         DataOutputStream dos = new DataOutputStream(out);
 
         byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
 
         response200Header(dos, body.length);
         responseBody(dos, body);
+    }
+
+    private void responseCSS(final String url, final OutputStream out) {
+        DataOutputStream dos = new DataOutputStream(out);
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/css;charset=utf-8\r\n");
+            dos.writeBytes("\r\n");
+            dos.write(Files.readAllBytes(new File("./webapp" + url).toPath()));
+            dos.flush();
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
     }
 
     private void getAllUsers(BufferedReader br, OutputStream out) throws IOException {
